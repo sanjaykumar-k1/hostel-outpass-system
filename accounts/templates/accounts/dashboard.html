@@ -15,6 +15,10 @@
 <div class="container mt-4">
     <h3>{{ role }} Dashboard</h3>
     <p>Welcome, {{ request.user.username }}</p>
+    {% if role == 'Student' %}
+        <a href="{% url 'request_outpass' %}" class="btn btn-primary">Request Outpass</a>
+        <a href="{% url 'my_requests' %}" class="btn btn-secondary">My Requests</a>
+    {% endif %}
 </div>
 </body>
 </html>
