@@ -1,4 +1,5 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from accounts.views import get_role
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from accounts.models import Student
@@ -39,3 +40,28 @@ def my_requests(request):
         return redirect('home')
     requests_list = OutpassRequest.objects.filter(student=student).order_by('-created_at')
     return render(request, 'outpass/my_requests.html', {'requests_list': requests_list})
+
+@login_required
+def warden_requests(request):
+    if get_role(request.user) != 'Warden':
+        messages.error(request, 'Only wardens can access this page.')
+        return redirect('home')
+    status = request.GET.get('status', 'Pending')
+    qs = OutpassRequest.objects.select_related('student__user').order_by('-created_at')
+    if status in ('Pending', 'Approved', 'Rejected'):
+        qs = qs.filter(status=status)
+    return render(request, 'outpass/warden_requests.html', {'requests_list': qs, 'status': status})
+
+
+@login_required
+def update_status(request, pk):
+    if get_role(request.user) != 'Warden' or request.method != 'POST':
+        return redirect('home')
+    outpass = get_object_or_404(OutpassRequest, pk=pk)
+    action = request.POST.get('action')
+    if action in ('Approved', 'Rejected'):
+        outpass.status = action
+        outpass.remark = request.POST.get('remark', '')
+        outpass.save()
+        messages.success(request, f'Request {action.lower()}.')
+    return redirect('warden_requests')

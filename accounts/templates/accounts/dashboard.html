@@ -19,6 +19,9 @@
         <a href="{% url 'request_outpass' %}" class="btn btn-primary">Request Outpass</a>
         <a href="{% url 'my_requests' %}" class="btn btn-secondary">My Requests</a>
     {% endif %}
+    {% if role == 'Warden' %}
+        <a href="{% url 'warden_requests' %}" class="btn btn-primary">Manage Outpass Requests</a>
+    {% endif %}
 </div>
 </body>
 </html>
