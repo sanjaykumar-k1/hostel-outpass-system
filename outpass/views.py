@@ -1,9 +1,13 @@
+import io
+import qrcode
 from django.shortcuts import render, redirect, get_object_or_404
-from accounts.views import get_role
+from django.http import HttpResponse
+from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from accounts.models import Student
-from .models import OutpassRequest
+from accounts.views import get_role
+from .models import OutpassRequest, MovementLog
 from .forms import OutpassRequestForm
 
 
@@ -65,3 +69,85 @@ def update_status(request, pk):
         outpass.save()
         messages.success(request, f'Request {action.lower()}.')
     return redirect('warden_requests')
+
+def notify_parent(student, text):
+    # Step 7-la real SMS connect pannuvom. Ippo terminal-la print aagum.
+    print(f"[SMS to {student.parent_phone}] {text}")
+
+
+@login_required
+def my_id(request):
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        messages.error(request, 'No student profile found.')
+        return redirect('home')
+    return render(request, 'outpass/my_id.html', {'student': student})
+
+
+@login_required
+def my_qr(request):
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        return redirect('home')
+    img = qrcode.make(student.student_id)
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    return HttpResponse(buf.getvalue(), content_type='image/png')
+
+
+def process_scan(sid):
+    try:
+        student = Student.objects.select_related('user').get(student_id__iexact=sid)
+    except Student.DoesNotExist:
+        return {'ok': False, 'message': 'Invalid ID. Student not found.'}
+
+    now = timezone.now()
+    when = timezone.localtime(now).strftime('%d %b %Y, %I:%M %p')
+    name = student.user.username
+
+    # Student already outside -> this scan is ENTRY
+    open_log = MovementLog.objects.filter(
+        student=student, out_time__isnull=False, in_time__isnull=True
+    ).order_by('-out_time').first()
+    if open_log:
+        open_log.in_time = now
+        open_log.save()
+        notify_parent(student, f'{name} entered the hostel at {when}.')
+        return {'ok': True, 'direction': 'IN', 'student': student, 'log': open_log,
+                'message': 'Entry recorded.'}
+
+    # Student inside -> this scan is EXIT, needs an approved unused outpass
+    outpass = OutpassRequest.objects.filter(
+        student=student, status='Approved', movementlog__isnull=True
+    ).order_by('created_at').first()
+    if not outpass:
+        return {'ok': False, 'student': student,
+                'message': 'No approved outpass. Do NOT allow exit.'}
+
+    log = MovementLog.objects.create(
+        outpass=outpass, student=student, out_time=now, reason=outpass.reason
+    )
+    notify_parent(student, f'{name} left the hostel at {when}. Reason: {outpass.reason}')
+    return {'ok': True, 'direction': 'OUT', 'student': student, 'log': log,
+            'message': 'Exit recorded.'}
+
+
+@login_required
+def gate_scan(request):
+    if get_role(request.user) not in ('Security', 'Warden'):
+        messages.error(request, 'Only security or warden can access this page.')
+        return redirect('home')
+    result = None
+    if request.method == 'POST':
+        result = process_scan(request.POST.get('student_id', '').strip())
+    return render(request, 'outpass/gate_scan.html', {'result': result})
+
+
+@login_required
+def movement_logs(request):
+    if get_role(request.user) not in ('Security', 'Warden'):
+        return redirect('home')
+    logs = MovementLog.objects.select_related('student__user').order_by('-out_time')[:100]
+    return render(request, 'outpass/movement_logs.html', {'logs': logs})
