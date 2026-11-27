@@ -124,13 +124,36 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+import os
+from dotenv import load_dotenv
+
+load_dotenv(BASE_DIR / '.env')
+
+MAIL_USER = os.getenv('EMAIL_HOST_USER', '')
+MAIL_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 
 MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+    "default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": "smtp.gmail.com",
+            "use_tls": True,
+            "username": MAIL_USER,
+            "password": MAIL_PASSWORD,
+        },
     },
 }
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv(BASE_DIR / '.env')
+
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
+TWILIO_FROM_NUMBER = os.getenv('TWILIO_FROM_NUMBER', '')
+

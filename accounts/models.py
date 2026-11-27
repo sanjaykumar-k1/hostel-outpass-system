@@ -10,6 +10,7 @@ class Student(models.Model):
     student_id = models.CharField(max_length=20, unique=True)
     room_no = models.CharField(max_length=10)
     parent_phone = models.CharField(max_length=15)
+    parent_email = models.EmailField(blank=True)
     photo = models.ImageField(upload_to='students/', blank=True, null=True)
 
     def __str__(self):

@@ -3,6 +3,8 @@ from django.shortcuts import render
 # Create your views here.
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from twilio.rest import Client
 
 
 def get_role(user):
@@ -11,7 +13,6 @@ def get_role(user):
     if user.groups.filter(name='Security').exists():
         return 'Security'
     return 'Student'
-
 
 @login_required
 def home(request):

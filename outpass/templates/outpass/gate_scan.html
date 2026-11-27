@@ -26,6 +26,7 @@
                 <div>
                     <p class="mb-1"><b>{{ result.student.user.username }}</b> ({{ result.student.student_id }})</p>
                     <p class="mb-1">Room: {{ result.student.room_no }}</p>
+                    <p class="mb-1">Parent: {{ result.student.parent_phone }}</p>
                     {% if result.log %}
                     <p class="mb-1">Reason: {{ result.log.reason }}</p>
                     <p class="mb-1">Out: {{ result.log.out_time }}</p>

@@ -10,22 +10,52 @@
 </nav>
 <div class="container mt-4">
     <h4>Movement Logs</h4>
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-3">
+            <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Student ID (S001)">
+        </div>
+        <div class="col-md-3">
+            <input type="date" name="date" value="{{ date }}" class="form-control">
+        </div>
+        <div class="col-md-3">
+            <select name="status" class="form-select">
+                <option value="">All</option>
+                <option value="late" {% if status == 'late' %}selected{% endif %}>Late / Overdue</option>
+                <option value="outside" {% if status == 'outside' %}selected{% endif %}>Currently outside</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary">Filter</button>
+            <a href="{% url 'movement_logs' %}" class="btn btn-secondary">Reset</a>
+        </div>
+    </form>
+
     <table class="table table-bordered bg-white">
         <thead>
-            <tr><th>Student ID</th><th>Name</th><th>Room</th><th>Out time</th><th>In time</th><th>Reason</th></tr>
+            <tr>
+                <th>Student ID</th><th>Name</th><th>Room</th><th>Parent phone</th>
+                <th>Out time</th><th>In time</th><th>Reason</th><th>Status</th>
+            </tr>
         </thead>
         <tbody>
             {% for l in logs %}
-            <tr>
+            <tr class="{% if l.late %}table-danger{% endif %}">
                 <td>{{ l.student.student_id }}</td>
                 <td>{{ l.student.user.username }}</td>
                 <td>{{ l.student.room_no }}</td>
+                <td>{{ l.student.parent_phone }}</td>
                 <td>{{ l.out_time|default:"-" }}</td>
-                <td>{% if l.in_time %}{{ l.in_time }}{% else %}<span class="text-danger">Outside</span>{% endif %}</td>
+                <td>{% if l.in_time %}{{ l.in_time }}{% else %}-{% endif %}</td>
                 <td>{{ l.reason }}</td>
+                <td>
+                    {% if l.late %}<span class="badge text-bg-danger">{{ l.state }}</span>
+                    {% elif l.in_time %}<span class="badge text-bg-success">{{ l.state }}</span>
+                    {% else %}<span class="badge text-bg-warning">{{ l.state }}</span>{% endif %}
+                </td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" class="text-center">No records.</td></tr>
+            <tr><td colspan="8" class="text-center">No records.</td></tr>
             {% endfor %}
         </tbody>
     </table>

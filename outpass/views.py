@@ -1,5 +1,6 @@
 import io
 import qrcode
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.utils import timezone
@@ -9,6 +10,8 @@ from accounts.models import Student
 from accounts.views import get_role
 from .models import OutpassRequest, MovementLog
 from .forms import OutpassRequestForm
+from twilio.rest import Client
+from django.core.mail import send_mail
 
 
 @login_required
@@ -70,9 +73,15 @@ def update_status(request, pk):
         messages.success(request, f'Request {action.lower()}.')
     return redirect('warden_requests')
 
+
 def notify_parent(student, text):
-    # Step 7-la real SMS connect pannuvom. Ippo terminal-la print aagum.
-    print(f"[SMS to {student.parent_phone}] {text}")
+    print(f"[Notification: {student.parent_phone} / {student.parent_email}] {text}")
+    if not (student.parent_email and settings.MAIL_USER and settings.MAIL_PASSWORD):
+        return
+    try:
+        send_mail('Hostel Outpass Alert', text, settings.MAIL_USER, [student.parent_email])
+    except Exception as e:
+        print(f"Email failed: {e}")
 
 
 @login_required
@@ -149,5 +158,34 @@ def gate_scan(request):
 def movement_logs(request):
     if get_role(request.user) not in ('Security', 'Warden'):
         return redirect('home')
-    logs = MovementLog.objects.select_related('student__user').order_by('-out_time')[:100]
-    return render(request, 'outpass/movement_logs.html', {'logs': logs})
+
+    q = request.GET.get('q', '').strip()
+    date = request.GET.get('date', '').strip()
+    status = request.GET.get('status', '')
+
+    qs = MovementLog.objects.select_related('student__user', 'outpass').order_by('-out_time')
+    if q:
+        qs = qs.filter(student__student_id__icontains=q)
+    if date:
+        qs = qs.filter(out_time__date=date)
+
+    now = timezone.now()
+    logs = []
+    for l in qs[:200]:
+        expected = l.outpass.expected_return if l.outpass else None
+        if l.in_time:
+            l.late = bool(expected and l.in_time > expected)
+            l.state = 'Late return' if l.late else 'On time'
+        else:
+            l.late = bool(expected and now > expected)
+            l.state = 'OVERDUE' if l.late else 'Outside'
+        logs.append(l)
+
+    if status == 'late':
+        logs = [l for l in logs if l.late]
+    elif status == 'outside':
+        logs = [l for l in logs if not l.in_time]
+
+    return render(request, 'outpass/movement_logs.html', {
+        'logs': logs, 'q': q, 'date': date, 'status': status,
+    })
