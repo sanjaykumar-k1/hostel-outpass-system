@@ -33,5 +33,13 @@ python manage.py runserver
 ```
 Open http://127.0.0.1:8000/ and log in. Create users, the `Warden` and `Security` groups, and Student profiles from `/admin/`.
 
+## Screenshots
+
+![Login](screenshots/login.png)
+![Request](screenshots/request.png)
+![Warden](screenshots/warden.png)
+![Gate Scan](screenshots/gate_scan.png)
+![Movement Logs](screenshots/logs.png)
+
 ## Author
 Sanjaykumar K | skillsanjay0101@gmail.com
