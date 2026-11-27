@@ -9,7 +9,7 @@ A Django web app that digitizes hostel outpasses: students request, wardens appr
 - Unique student ID with QR code
 - Gate scan page (camera or manual ID): shows student details, validates an approved outpass, auto-detects exit or entry
 - Movement log: who left, when they left, when they returned, and why
-- Parent notification message on exit and entry (currently printed to console; SMS API can be plugged in)
+- Parent notification- Automatic parent email notification on every exit and entry (Django mail, Gmail SMTP)
 
 ## Tech Stack
 Python, Django, SQLite, HTML, CSS, JavaScript, Bootstrap, html5-qrcode, qrcode (Python)
